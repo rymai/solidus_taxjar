@@ -1,7 +1,7 @@
-SpreeTaxjar
+SolidusTaxjar
 ===========
 
-Spree::Taxjar is a sales tax extension for Spree using [SmartCalcs by TaxJar](https://developers.taxjar.com/api/reference/).
+A sales tax extension for Solidus using [SmartCalcs by TaxJar](https://developers.taxjar.com/api/reference/).
 
 ## Prerequisites
 
@@ -16,10 +16,8 @@ Spree::Taxjar is a sales tax extension for Spree using [SmartCalcs by TaxJar](ht
 1. Add this extension to your Gemfile with this line:
 
   ```ruby
-  gem 'spree_taxjar', github: 'vinsol-spree-contrib/spree_taxjar', branch: <spree-version-compatible>
+  gem 'solidus_taxjar'
   ```
-  
-  *The `branch` option is important:* it must match the version of Spree you're using. For example, use `3-1-stable` if you're using Spree `3-1-stable` or any `3.1.x` version.
 
 2. Install the gem using Bundler:
 
@@ -30,7 +28,7 @@ Spree::Taxjar is a sales tax extension for Spree using [SmartCalcs by TaxJar](ht
 3. Copy & run migrations
 
   ```ruby
-  bundle exec rails g spree_taxjar:install
+  bundle exec rails g soldius_taxjar:install
   ```
 
 4. Restart your server
@@ -92,4 +90,3 @@ For better handling of exceptions raised by TaxJar due to various validations ad
         flash[:error] = 'TaxJar::' + e.message
         redirect_to cart_path
       end
-
