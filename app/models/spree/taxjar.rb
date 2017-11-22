@@ -142,7 +142,7 @@ module Spree
             quantity: return_items.length,
             product_identifier: item.variant.sku,
             description: ActionView::Base.full_sanitizer.sanitize(item.variant.description).truncate(150),
-            unit_price: item.total_excluding_vat,
+            unit_price: item.pre_tax_amount,
             product_tax_code: item.variant.tax_category.try(:tax_code)
           }
         end

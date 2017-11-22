@@ -12,7 +12,7 @@
           <% @preferences_api.each do |key| %>
               <div class="form-group">
                 <%= label_tag key %>
-                <%= render "spree/admin/shared/preference_fields/#{Spree::Config.preference_type(key)}", name: key, value: Spree::Config[key] %>
+                <%= preference_field_tag(key, Spree::Config[key], type: Spree::Config.preference_type(key)) %>
               </div>
           <% end %>
         </fieldset>
