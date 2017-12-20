@@ -6,6 +6,7 @@ A sales tax extension for Solidus using [SmartCalcs by TaxJar](https://developer
 ## Prerequisites
 
 - Create a new account with [TaxJar](http://www.taxjar.com/)
+
 - Go to `Account >> SmartCalcs API` to generate an API token
     - API token is needed to calculate sales tax from TaxJar over API
 - Go to `Account >> State Settings` and click the [Add State with Nexus](http://blog.taxjar.com/sales-tax-nexus-definition/) button for each state where want/need to collect sales tax.
@@ -35,19 +36,13 @@ A sales tax extension for Solidus using [SmartCalcs by TaxJar](https://developer
 
   If your server was running, restart it so that it can find the assets properly.
 
-5. Go to Admin >> Configurations >> TaxJar Settings
-  - Add your TaxJar API Token
-  - Check the `TAXJAR ENABLED` checkbox
-  - Optionally, check `TAXJAR DEBUG ENABLED` for debugging issues
-    - Not recommended for production use unless debugging production issues
+5. 
 
 ## Developing / Debugging Extension
 
-- Ensure `Spree::Config[:taxjar_enabled]` is set as expected (true/false)
-- Set `Spree::Config[:taxjar_debug_enabled]` as true
-    - It starts logging the interactions in `spec/dummy/log/spree_taxjar.log` if using tests
-    - Check the logs in your Rails application AT `log/spree_taxjar.log` where you have installed the spree_taxjar extension
-    - The same logs are also added to Rails log file like `log/development.log` (works for all environments)
+- As Solidus migrated to Tax configuration at the Tax calculator level, you should likewise configure your API key in each of the Tax rates applicable to your store. 
+You can get to these in these in Settings >> Taxes >> Tax Rates. Go to edit any tax rate and look for the field 'API KEY:' at the bottom of the page.
+
 - As most of the API interactions are recorded and stored in VCR cassettes AT `spec/fixtures/vcr_cassettes`
     - Start with getting familiar with request and response expected
     - Feel free to delete the cassettes to debug your live use-case by setting `Spree::Config[:taxjar_api_key]` as your api_key and inspect results
