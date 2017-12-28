@@ -116,7 +116,6 @@ module Spree
       end
 
       def taxable_line_items_params
-        byebug
         @order.line_items.map do |item|
           {
             id: item.id,

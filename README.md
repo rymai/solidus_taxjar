@@ -59,8 +59,6 @@ end
     - Start with getting familiar with request and response expected
     - Feel free to delete the cassettes to debug your live use-case by setting `Spree::Config[:taxjar_api_key]` as your api_key and inspect results
 
-## Extra Debugging for Taxjar API request/responses
-
 
 
 
