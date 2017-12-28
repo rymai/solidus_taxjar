@@ -44,13 +44,25 @@ A sales tax extension for Solidus using [SmartCalcs by TaxJar](https://developer
 ## Developing / Debugging Extension
 
 - Ensure `Spree::Config[:taxjar_enabled]` is set as expected (true/false)
-- Set `Spree::Config[:taxjar_debug_enabled]` as true
-    - It starts logging the interactions in `spec/dummy/log/spree_taxjar.log` if using tests
-    - Check the logs in your Rails application AT `log/spree_taxjar.log` where you have installed the spree_taxjar extension
-    - The same logs are also added to Rails log file like `log/development.log` (works for all environments)
+
+- Look for basic debugging in your standard Rails console that begin with tags [Taxjar]
+
+- For advanced debugging to see the full Taxjar response/request, turn on extra_debugging
+
+SpreeTaxjar.setup do |config|
+  config.extra_debugging = true
+end
+
+(do this in an initializer file at `config/initializers/solidus_taxjar.rb`)
+
 - As most of the API interactions are recorded and stored in VCR cassettes AT `spec/fixtures/vcr_cassettes`
     - Start with getting familiar with request and response expected
     - Feel free to delete the cassettes to debug your live use-case by setting `Spree::Config[:taxjar_api_key]` as your api_key and inspect results
+
+## Extra Debugging for Taxjar API request/responses
+
+
+
 
 ## TaxJar API Usage and Billing
 

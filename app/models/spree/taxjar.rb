@@ -12,81 +12,70 @@ module Spree
     def create_refund_transaction_for_order
       if has_nexus? && !reimbursement_present?
         api_params = refund_params
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, reimbursement: {id: @reimbursement.id, number: @reimbursement.number}, api_params: api_params
         api_response = @client.create_refund(api_params)
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, reimbursement: {id: @reimbursement.id, number: @reimbursement.number}, api_response: api_response
         api_response
       end
     end
 
     def create_transaction_for_order
-      Rails.logger.debug order: {id: @order.id, number: @order.number}
       if has_nexus?
         api_params = transaction_parameters
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, api_params: api_params
         api_response = @client.create_order(api_params)
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, api_response: api_response
+        Rails.logger.debug "[Taxjar] create_transaction_for_order #{@order.number} api_response: #{api_response.inspect}"
         api_response
       end
     rescue HTTP::Error
-      Rails.logger.error "Taxjar Failure: Failed to create transaction for order #{@order.number}"
+      Rails.logger.error "[Taxjar] create_transaction_for_order-Failure: Failed to create transaction for order #{@order.number}"
       # Silently ignore
     end
 
     def delete_transaction_for_order
-      Rails.logger.debug order: {id: @order.id, number: @order.number}
       if has_nexus?
         api_response = @client.delete_order(@order.number)
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, api_response: api_response
+        Rails.logger.debug "[Taxjar] delete_transaction_for_order #{order.number} api_response: #{api_response.inspect}"
         api_response
       end
     rescue ::Taxjar::Error::NotFound => e
-      Rails.logger.warn order: {id: @order.id, number: @order.number}, error_msg: e.message
+      Rails.logger.warn "[Taxjar] Taxjar::Error::NotFound: #{order.number} error_msg: #{e.message}"
     end
 
     def calculate_tax_for_shipment
-      Rails.logger.debug shipment: {order: {id: @shipment.order.id, number: @shipment.order.number}}
       if has_nexus?
         api_params = shipment_tax_params
-        Rails.logger.debug shipment: {order: {id: @shipment.order.id, number: @shipment.order.number}, api_params: api_params}
         api_response = @client.tax_for_order(api_params)
-        Rails.logger.debug shipment: {order: {id: @shipment.order.id, number: @shipment.order.number}, api_response: api_response}
         api_response.amount_to_collect
       else
         0
       end
     rescue HTTP::Error
-      Rails.logger.error "Taxjar Failure: Failed to calculate tax for shipment #{@shipment.id} (#{@shipment.order.number})"
+      Rails.logger.error "[Taxjar] Failure: Failed to calculate tax for shipment #{@shipment.id} (#{@shipment.order.number})"
       0
     end
 
     def has_nexus?
       nexus_regions = @client.nexus_regions
-      Rails.logger.debug \
-        order: {id: @order.id, number: @order.number},
-        nexus_regions: nexus_regions,
-        address: {state: tax_address_state_abbr, city: tax_address_city, zip: tax_address_zip}
       if nexus_regions.present?
         nexus_states(nexus_regions).include?(tax_address_state_abbr)
       else
         false
       end
     rescue HTTP::Error
-      Rails.logger.error "Taxjar Failure: Failed to determine nexus for #{@order.number}"
+      Rails.logger.error "[Taxjar] Failure: Failed to determine nexus for #{@order.number}"
       false
     end
 
     def calculate_tax_for_order
-      Rails.logger.debug order: {id: @order.id, number: @order.number}
       if has_nexus?
         api_params = tax_params
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, api_params: api_params
         api_response = @client.tax_for_order(api_params)
-        Rails.logger.debug order: {id: @order.id, number: @order.number}, api_response: api_response
+        if (SpreeTaxjar.extra_debugging)
+          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_params: #{ api_params.to_yaml}"
+          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_response: #{ api_response.to_yaml}, breakdown: #{ api_response.breakdown.inspect}"
+        end
         api_response
       end
     rescue HTTP::Error
-      Rails.logger.error "Taxjar Failure: Failed to calcuate tax for #{@order.number}"
+      Rails.logger.error "[Taxjar] Failure: Failed to calcuate tax for #{@order.number}"
       nil
     end
 
@@ -127,12 +116,13 @@ module Spree
       end
 
       def taxable_line_items_params
+        byebug
         @order.line_items.map do |item|
           {
             id: item.id,
             quantity: item.quantity,
             unit_price: item.price,
-            discount: item.promo_total,
+            discount: item.promo_total * -1, # note: spree keeps promo_total as negative number; Taxjar expects positive number
             product_tax_code: item.tax_category.try(:tax_code)
           }
         end
@@ -211,6 +201,5 @@ module Spree
           }
         end
       end
-
   end
 end
