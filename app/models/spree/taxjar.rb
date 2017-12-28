@@ -42,12 +42,19 @@ module Spree
     def calculate_tax_for_shipment
       if has_nexus?
         api_params = shipment_tax_params
-        api_response = @client.tax_for_order(api_params)
+        begin
+          api_response = @client.tax_for_order(api_params)
+        rescue Taxjar::Error => e
+          puts "[Taxjar] exception thrown calculate_tax_for_shipment - #{e.class.name}"
+          puts "[Taxjar] exception thrown calculate_tax_for_shipment- #{e.class.name}"
+          raise e if ! SpreeTaxjar.swallow_errors
+        end
         api_response.amount_to_collect
       else
         0
       end
     rescue HTTP::Error
+      raise e if ! SpreeTaxjar.swallow_errors
       Rails.logger.error "[Taxjar] Failure: Failed to calculate tax for shipment #{@shipment.id} (#{@shipment.order.number})"
       0
     end
@@ -67,7 +74,15 @@ module Spree
     def calculate_tax_for_order
       if has_nexus?
         api_params = tax_params
-        api_response = @client.tax_for_order(api_params)
+        begin
+          api_response = @client.tax_for_order(api_params)
+        rescue Taxjar::Error => e
+          puts "[Taxjar] exception thrown in calculate_tax_for_order - #{e.class.name}"
+          puts "[Taxjar] exception thrown in calculate_tax_for_order - #{e.class.name}"
+          raise e if ! SpreeTaxjar.swallow_errors
+        end
+
+
         if (SpreeTaxjar.extra_debugging)
           Rails.logger.debug "[Taxjar] for order #{@order.number}  api_params: #{ api_params.to_yaml}"
           Rails.logger.debug "[Taxjar] for order #{@order.number}  api_response: #{ api_response.to_yaml}, breakdown: #{ api_response.breakdown.inspect}"
@@ -75,7 +90,7 @@ module Spree
         api_response
       end
     rescue HTTP::Error
-      Rails.logger.error "[Taxjar] Failure: Failed to calcuate tax for #{@order.number}"
+      Rails.logger.error "[Taxjar] Failure in calculate_tax_for_order: Failed to calcuate tax for #{@order.number}"
       nil
     end
 

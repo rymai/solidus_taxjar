@@ -55,6 +55,8 @@ end
 
 (do this in an initializer file at `config/initializers/solidus_taxjar.rb`)
 
+You can also set `swallow_errors` here to false to raise on Taxjar errors (defaults to true).
+
 - As most of the API interactions are recorded and stored in VCR cassettes AT `spec/fixtures/vcr_cassettes`
     - Start with getting familiar with request and response expected
     - Feel free to delete the cassettes to debug your live use-case by setting `Spree::Config[:taxjar_api_key]` as your api_key and inspect results

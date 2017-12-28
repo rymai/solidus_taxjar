@@ -1,7 +1,8 @@
 module SpreeTaxjar
   class << self
-    mattr_accessor :extra_debugging
-    self.extra_debugging = true
+    mattr_accessor :extra_debugging, :swallow_errors
+    self.extra_debugging = false
+    self.swallow_errors = true # set to fails to raise on taxjar errors
 
     # add default values of more config vars here
   end
