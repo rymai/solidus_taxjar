@@ -121,7 +121,7 @@ module Spree
             id: item.id,
             quantity: item.quantity,
             unit_price: item.price,
-            discount: item.promo_total * -1, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+            discount: item.promo_total.abs, # note: spree keeps promo_total as negative number; Taxjar expects positive number
             product_tax_code: item.tax_category.try(:tax_code)
           }
         end
