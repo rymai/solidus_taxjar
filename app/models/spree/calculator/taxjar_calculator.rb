@@ -74,7 +74,7 @@ module Spree
 
         # TODO: FIX ME
 
-        taxjar_response = Spree::Taxjar.new(preferred_api_key, order).calculate_tax_for_order
+        taxjar_response = Spree::Taxjar.new(preferred_api_key, order, nil, nil, item).calculate_tax_for_order
         return 0 unless taxjar_response
 
         tax_for_current_item = cache_response(taxjar_response, order, tax_address, item)

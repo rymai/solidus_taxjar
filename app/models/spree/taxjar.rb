@@ -2,10 +2,15 @@ module Spree
   class Taxjar
     attr_reader :client, :order, :reimbursement, :shipment
 
-    def initialize(api_key, order = nil, reimbursement = nil, shipment = nil)
+    def initialize(api_key, order = nil, reimbursement = nil, shipment = nil, fresh_lineitem = nil)
+      # TODO: refactor into splat pattern to remove this arity dependancy
+
+      # if fresh_lineitem is passed prefer that over the association
+      # from the order, because the association from the order may be stale
       @order = order
       @shipment = shipment
       @reimbursement = reimbursement
+      @fresh_lineitem = fresh_lineitem
       @client = ::Taxjar::Client.new api_key: api_key
     end
 
@@ -21,6 +26,11 @@ module Spree
       if has_nexus?
         api_params = transaction_parameters
         api_response = @client.create_order(api_params)
+
+        if (SpreeTaxjar.extra_debugging)
+          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_params: #{ api_params.to_yaml}"
+          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_response: #{ api_response.to_yaml}, breakdown: #{ api_response.breakdown.inspect}"
+        end
         Rails.logger.debug "[Taxjar] create_transaction_for_order #{@order.number} api_response: #{api_response.inspect}"
         api_response
       end
@@ -132,13 +142,23 @@ module Spree
 
       def taxable_line_items_params
         @order.line_items.map do |item|
-          {
-            id: item.id,
-            quantity: item.quantity,
-            unit_price: item.price,
-            discount: item.promo_total.abs, # note: spree keeps promo_total as negative number; Taxjar expects positive number
-            product_tax_code: item.tax_category.try(:tax_code)
-          }
+          if @fresh_lineitem == item
+            {
+              id: @fresh_lineitem.id,
+              quantity: @fresh_lineitem.quantity,
+              unit_price: @fresh_lineitem.price,
+              discount: @fresh_lineitem.promo_total.abs, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+              product_tax_code: @fresh_lineitem.tax_category.try(:tax_code)
+            }
+          else
+            {
+              id: item.id,
+              quantity: item.quantity,
+              unit_price: item.price,
+              discount: item.promo_total.abs, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+              product_tax_code: item.tax_category.try(:tax_code)
+            }
+          end
         end
       end
 
