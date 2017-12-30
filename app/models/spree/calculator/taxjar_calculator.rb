@@ -58,22 +58,14 @@ module Spree
       rails_cache_key = cache_key(order, item, tax_address)
 
       logger.debug "[Taxjar] tax_for_item order #{item.order.number}: lineitem #{item.id}, $#{item.amount.to_f}, promo: $#{item.promo_total}"
-      if Rails.cache.read(rails_cache_key)
-        logger.debug "[Taxjar] ... using cached response; cache key is #{rails_cache_key}"
+      if SpreeTaxjar.extra_debugging && (read_key = Rails.cache.read(rails_cache_key))
+        logger.debug "[Taxjar] ... using cached response; cache key is #{rails_cache_key}; value =#{read_key}"
+
       end
 
       ## Test when caching enabled that only 1 API call is sent for an order
       ## should avoid N calls for N line_items
       Rails.cache.fetch(rails_cache_key, expires_in: CACHE_EXPIRATION_DURATION) do
-
-        # TODO: the line_items in the database do not match the in-memory object
-        # for item, which has been adjusted based on a promotion
-        # as a result, the discount passed to Taxjar is always 0.0,
-        # because it is reloaded from the database
-        # and unfortunately gets cached this way and then re-used
-
-        # TODO: FIX ME
-
         taxjar_response = Spree::Taxjar.new(preferred_api_key, order, nil, nil, item).calculate_tax_for_order
         return 0 unless taxjar_response
 
@@ -103,7 +95,7 @@ module Spree
 
     def cache_key(order, item, address)
       if item.is_a?(Spree::LineItem)
-        ['Taxjar-Spree::LineItem', order.id, item.id, address.state_id, address.zipcode, item.amount, item.promo_total, :amount_to_collect]
+        ['Taxjar-Spree::LineItem', order.id, item.id, address.state_id, address.zipcode, item.amount, item.promo_total, order.promo_total, :amount_to_collect]
       elsif item.is_a?(Spree::Shipment)
         ['Taxjar-Spree::Shipment', order.id, item.id, address.state_id, address.zipcode, item.cost, :amount_to_collect]
       end

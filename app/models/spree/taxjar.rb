@@ -10,7 +10,8 @@ module Spree
       @order = order
       @shipment = shipment
       @reimbursement = reimbursement
-      @fresh_lineitem = fresh_lineitem
+      @fresh_lineitem = fresh_lineitem # TODO: code smell, this is here because solidus is asking for a tax to be calcualted
+      # with stale data in the database
       @client = ::Taxjar::Client.new api_key: api_key
     end
 
@@ -25,12 +26,17 @@ module Spree
     def create_transaction_for_order
       if has_nexus?
         api_params = transaction_parameters
-        api_response = @client.create_order(api_params)
-
         if (SpreeTaxjar.extra_debugging)
-          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_params: #{ api_params.to_yaml}"
-          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_response: #{ api_response.to_yaml}, breakdown: #{ api_response.breakdown.inspect}"
+          Rails.logger.debug "[Taxjar] create_transaction_for_order- for order #{@order.number}  api_params: #{ api_params.to_yaml}"
         end
+
+        api_response = @client.create_order(api_params)
+        if (SpreeTaxjar.extra_debugging)
+
+          Rails.logger.debug "[Taxjar] create_transaction_for_order- for order #{@order.number}  api_response: #{ api_response.to_yaml}"
+        end
+
+
         Rails.logger.debug "[Taxjar] create_transaction_for_order #{@order.number} api_response: #{api_response.inspect}"
         api_response
       end
@@ -94,8 +100,8 @@ module Spree
 
 
         if (SpreeTaxjar.extra_debugging)
-          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_params: #{ api_params.to_yaml}"
-          Rails.logger.debug "[Taxjar] for order #{@order.number}  api_response: #{ api_response.to_yaml}, breakdown: #{ api_response.breakdown.inspect}"
+          Rails.logger.debug "[Taxjar] calculate_tax_for_order- for order #{@order.number}  api_params: #{ api_params.to_yaml}"
+          Rails.logger.debug "[Taxjar] calculate_tax_for_order- for order #{@order.number}  api_response: #{ api_response.to_yaml}, breakdown: #{ api_response.breakdown.inspect}"
         end
         api_response
       end
@@ -115,7 +121,7 @@ module Spree
       end
 
       def tax_address_state_abbr
-        tax_address.state&.abbr
+        tax_address.state.try(:abbr)
       end
 
       def tax_address_city
@@ -131,9 +137,14 @@ module Spree
       end
 
       def tax_params
+        amount = @order.item_total + @order.promo_total + @order.shipment_total
+        # TODO: this is a code smell but fixes a stale object problem
+        if @fresh_lineitem && @fresh_lineitem.changed.include?('promo_total')
+          amount += @fresh_lineitem.promo_total
+        end
         {
-          amount: @order.item_total,
-          shipping: @order.shipment_total,
+          amount: amount.to_f, # Taxjar expects the charges after promotions are applied
+          shipping: @order.shipment_total.to_f,
           to_state: tax_address_state_abbr,
           to_zip: tax_address_zip,
           line_items: taxable_line_items_params
@@ -146,16 +157,16 @@ module Spree
             {
               id: @fresh_lineitem.id,
               quantity: @fresh_lineitem.quantity,
-              unit_price: @fresh_lineitem.price,
-              discount: @fresh_lineitem.promo_total.abs, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+              unit_price: @fresh_lineitem.price.to_f,
+              discount: @fresh_lineitem.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
               product_tax_code: @fresh_lineitem.tax_category.try(:tax_code)
             }
           else
             {
               id: item.id,
               quantity: item.quantity,
-              unit_price: item.price,
-              discount: item.promo_total.abs, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+              unit_price: item.price.to_f,
+              discount: item.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
               product_tax_code: item.tax_category.try(:tax_code)
             }
           end
@@ -199,7 +210,7 @@ module Spree
         address_params.merge({
           transaction_id: @order.number,
           transaction_date: @order.completed_at.as_json,
-          amount: @order.item_total + @order.shipment_total,
+          amount: @order.item_total + @order.promo_total + @order.shipment_total,
           shipping: @order.shipment_total,
           sales_tax: @order.additional_tax_total,
           line_items: line_item_params
@@ -230,7 +241,7 @@ module Spree
             description: "#{item.product.name}: #{item.variant.options_text}",
             unit_price: item.price,
             sales_tax: item.additional_tax_total,
-            discount: item.promo_total,
+            discount: item.promo_total.abs,
             product_tax_code: item.tax_category.try(:tax_code)
           }
         end
