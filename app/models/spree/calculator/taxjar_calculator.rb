@@ -60,13 +60,12 @@ module Spree
       logger.debug "[Taxjar] tax_for_item order #{item.order.number}: lineitem #{item.id}, $#{item.amount.to_f}, promo: $#{item.promo_total}"
       if SpreeTaxjar.extra_debugging && (read_key = Rails.cache.read(rails_cache_key))
         logger.debug "[Taxjar] ... using cached response; cache key is #{rails_cache_key}; value =#{read_key}"
-
       end
 
       ## Test when caching enabled that only 1 API call is sent for an order
       ## should avoid N calls for N line_items
       Rails.cache.fetch(rails_cache_key, expires_in: CACHE_EXPIRATION_DURATION) do
-        taxjar_response = Spree::Taxjar.new(preferred_api_key, order, nil, nil, item).calculate_tax_for_order
+        taxjar_response = Spree::Taxjar.new(preferred_api_key, order, nil, nil).calculate_tax_for_order
         return 0 unless taxjar_response
 
         tax_for_current_item = cache_response(taxjar_response, order, tax_address, item)
@@ -79,16 +78,15 @@ module Spree
       ## for given line_item
       ## better to use Rails.cache.fetch for order and wrapping lookup based on line_item id
       res = nil
-      taxjar_response.breakdown.line_items.each do |line_item|
-        if !item
-          item = Spree::LineItem.find(line_item.id)
-        end
-        res = line_item.tax_collectable
+      taxjar_response.breakdown.line_items.each do |taxjar_line_item|
+        # the taxjar_line_item is a hash of the API response
+        # the line_item is the Spree::LineItem object
+        line_item = Spree::LineItem.find(taxjar_line_item.id)
+        res = taxjar_line_item.tax_collectable
 
-        this_item_cache_key = cache_key(order, item, address)
-        logger.debug "[Taxjar] ... writing to taxjar cache cache_key is #{this_item_cache_key}; amount=#{line_item.tax_collectable}"
-
-        Rails.cache.write(this_item_cache_key, line_item.tax_collectable, expires_in: CACHE_EXPIRATION_DURATION)
+        this_item_cache_key = cache_key(order, line_item, address)
+        logger.debug "[Taxjar] ... writing to taxjar cache cache_key is #{this_item_cache_key}; amount=#{taxjar_line_item.tax_collectable}"
+        Rails.cache.write(this_item_cache_key, taxjar_line_item.tax_collectable, expires_in: CACHE_EXPIRATION_DURATION)
       end
       res
     end
@@ -98,6 +96,8 @@ module Spree
         ['Taxjar-Spree::LineItem', order.id, item.id, address.state_id, address.zipcode, item.amount, item.promo_total, order.promo_total, :amount_to_collect]
       elsif item.is_a?(Spree::Shipment)
         ['Taxjar-Spree::Shipment', order.id, item.id, address.state_id, address.zipcode, item.cost, :amount_to_collect]
+      else
+        raise "cache_key passed and #{item} object -- don't know how to process"
       end
     end
 

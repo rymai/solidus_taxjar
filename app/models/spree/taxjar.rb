@@ -2,7 +2,7 @@ module Spree
   class Taxjar
     attr_reader :client, :order, :reimbursement, :shipment
 
-    def initialize(api_key, order = nil, reimbursement = nil, shipment = nil, fresh_lineitem = nil)
+    def initialize(api_key, order = nil, reimbursement = nil, shipment = nil)
       # TODO: refactor into splat pattern to remove this arity dependancy
 
       # if fresh_lineitem is passed prefer that over the association
@@ -10,7 +10,7 @@ module Spree
       @order = order
       @shipment = shipment
       @reimbursement = reimbursement
-      @fresh_lineitem = fresh_lineitem # TODO: code smell, this is here because solidus is asking for a tax to be calcualted
+      # @fresh_lineitem = fresh_lineitem # TODO: code smell, this is here because solidus is asking for a tax to be calcualted
       # with stale data in the database
       @client = ::Taxjar::Client.new api_key: api_key
     end
@@ -32,7 +32,6 @@ module Spree
 
         api_response = @client.create_order(api_params)
         if (SpreeTaxjar.extra_debugging)
-
           Rails.logger.debug "[Taxjar] create_transaction_for_order- for order #{@order.number}  api_response: #{ api_response.to_yaml}"
         end
 
@@ -139,9 +138,9 @@ module Spree
       def tax_params
         amount = @order.item_total + @order.promo_total + @order.shipment_total
         # TODO: this is a code smell but fixes a stale object problem
-        if @fresh_lineitem && @fresh_lineitem.changed.include?('promo_total')
-          amount += @fresh_lineitem.promo_total
-        end
+        # if @fresh_lineitem && @fresh_lineitem.changed.include?('promo_total')
+        #   amount += @fresh_lineitem.promo_total
+        # end
         {
           amount: amount.to_f, # Taxjar expects the charges after promotions are applied
           shipping: @order.shipment_total.to_f,
@@ -153,15 +152,15 @@ module Spree
 
       def taxable_line_items_params
         @order.line_items.map do |item|
-          if @fresh_lineitem == item
-            {
-              id: @fresh_lineitem.id,
-              quantity: @fresh_lineitem.quantity,
-              unit_price: @fresh_lineitem.price.to_f,
-              discount: @fresh_lineitem.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
-              product_tax_code: @fresh_lineitem.tax_category.try(:tax_code)
-            }
-          else
+          # if @fresh_lineitem == item
+          #   {
+          #     id: @fresh_lineitem.id,
+          #     quantity: @fresh_lineitem.quantity,
+          #     unit_price: @fresh_lineitem.price.to_f,
+          #     discount: @fresh_lineitem.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+          #     product_tax_code: @fresh_lineitem.tax_category.try(:tax_code)
+          #   }
+          # else
             {
               id: item.id,
               quantity: item.quantity,
@@ -169,7 +168,7 @@ module Spree
               discount: item.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
               product_tax_code: item.tax_category.try(:tax_code)
             }
-          end
+          # end
         end
       end
 
