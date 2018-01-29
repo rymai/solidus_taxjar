@@ -58,12 +58,17 @@ module Spree
       rails_cache_key = cache_key(order, item, tax_address)
 
       logger.debug "[Taxjar] tax_for_item order #{item.order.number}: lineitem #{item.id}, $#{item.amount.to_f}, promo: $#{item.promo_total}"
-      if SpreeTaxjar.extra_debugging && (read_key = Rails.cache.read(rails_cache_key))
-        logger.debug "[Taxjar] ... using cached response; cache key is #{rails_cache_key}; value =#{read_key}"
+      if SpreeTaxjar.extra_debugging
+        if (read_key = Rails.cache.read(rails_cache_key))
+          logger.debug "[Taxjar] ... using cached response; cache key is #{rails_cache_key}; value =#{read_key}"
+        else
+          logger.debug "[Taxjar] ... not cached: #{rails_cache_key} "
+        end
       end
 
       ## Test when caching enabled that only 1 API call is sent for an order
       ## should avoid N calls for N line_items
+
       Rails.cache.fetch(rails_cache_key, expires_in: CACHE_EXPIRATION_DURATION) do
         taxjar_response = Spree::Taxjar.new(preferred_api_key, order, nil, nil).calculate_tax_for_order
         return 0 unless taxjar_response

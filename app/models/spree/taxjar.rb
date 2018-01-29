@@ -152,23 +152,13 @@ module Spree
 
       def taxable_line_items_params
         @order.line_items.map do |item|
-          # if @fresh_lineitem == item
-          #   {
-          #     id: @fresh_lineitem.id,
-          #     quantity: @fresh_lineitem.quantity,
-          #     unit_price: @fresh_lineitem.price.to_f,
-          #     discount: @fresh_lineitem.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
-          #     product_tax_code: @fresh_lineitem.tax_category.try(:tax_code)
-          #   }
-          # else
-            {
-              id: item.id,
-              quantity: item.quantity,
-              unit_price: item.price.to_f,
-              discount: item.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
-              product_tax_code: item.tax_category.try(:tax_code)
-            }
-          # end
+          {
+            id: item.id,
+            quantity: item.quantity,
+            unit_price: item.price.to_f,
+            discount: item.promo_total.abs.to_f, # note: spree keeps promo_total as negative number; Taxjar expects positive number
+            product_tax_code: item.tax_category.try(:tax_code)
+          }
         end
       end
 
