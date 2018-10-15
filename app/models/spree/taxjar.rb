@@ -59,7 +59,7 @@ module Spree
         api_params = shipment_tax_params
         begin
           api_response = @client.tax_for_order(api_params)
-        rescue Taxjar::Error => e
+        rescue ::Taxjar::Error => e
           puts "[Taxjar] exception thrown calculate_tax_for_shipment - #{e.class.name}"
           puts "[Taxjar] exception thrown calculate_tax_for_shipment- #{e.class.name}"
           raise e if ! SpreeTaxjar.swallow_errors
@@ -91,7 +91,7 @@ module Spree
         api_params = tax_params
         begin
           api_response = @client.tax_for_order(api_params)
-        rescue Taxjar::Error => e
+        rescue ::Taxjar::Error => e
           puts "[Taxjar] exception thrown in calculate_tax_for_order - #{e.class.name}"
           puts "[Taxjar] exception thrown in calculate_tax_for_order - #{e.class.name}"
           raise e if ! SpreeTaxjar.swallow_errors
