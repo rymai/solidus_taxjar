@@ -43,16 +43,29 @@ module Spree
     def tax_for_shipment(shipment)
       return 0 unless shipment.order.tax_address
 
-      cached_tax_for_shipment(shipment).tap do |amount_to_collect|
-        logger.debug "[Taxjar] tax_for_shipment: #{shipment.inspect} => $#{amount_to_collect}"
+      tax_for_shipment = cached_tax_for_shipment(shipment)
+
+      unless tax_for_shipment
+        logger.debug "[Taxjar] tax_for_shipment: #{shipment.inspect} => $0 (tax_for_shipment was nil)"
+        return 0
+      end
+
+      tax_for_shipment.amount_to_collect.tap do |amount|
+        logger.debug "[Taxjar] tax_for_shipment: #{shipment.inspect} => $#{amount}"
       end
     end
 
     def tax_for_item(item)
       return 0 unless item.order.tax_address
 
-      cached_tax_for_order(item.order).
-        breakdown.line_items.
+      tax_for_order = cached_tax_for_order(item.order)
+
+      unless tax_for_order
+        logger.debug "[Taxjar] tax_for_item order #{item.order.number}: lineitem #{item.id}, $#{item.amount.to_f}, promo: $#{item.promo_total} => $0 (tax_for_order was nil)"
+        return 0
+      end
+
+      tax_for_order.breakdown.line_items.
         find { |line_item| line_item.id.to_i == item.id }.
         tax_collectable.tap do |tax_collectable|
           logger.debug "[Taxjar] tax_for_item order #{item.order.number}: lineitem #{item.id}, $#{item.amount.to_f}, promo: $#{item.promo_total} => $#{tax_collectable}"
