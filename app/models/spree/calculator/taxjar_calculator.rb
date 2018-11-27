@@ -94,7 +94,7 @@ module Spree
         'Taxjar-Spree::Order',
         :amount_to_collect,
         order.id,
-        order.line_items.map(&:variant_id),
+        order.line_items.map(&:id),
         order.line_items.map(&:quantity),
         order.shipments.map(&:total_before_tax),
         order.tax_address.state_id,

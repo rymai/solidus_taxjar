@@ -70,6 +70,22 @@ describe Spree::Calculator::TaxjarCalculator do
         expect(calculator.compute_line_item(line_item)).to eq(0)
       end
     end
+
+    context 'when a line item changes but has the exact same attribtues as a previous one' do
+      it 'returns tax for the line_item upto two decimal places' do
+        VCR.use_cassette "fully_taxable_line_item" do
+          # Cache the Taxjar response
+          expect(calculator.compute_line_item(line_item)).to eq(2.33)
+        end
+
+        order.line_items.first.destroy
+        new_line_item = create(:line_item, price: 10, quantity: 3, order_id: order.id)
+
+        VCR.use_cassette "fully_taxable_new_line_item" do
+          expect(calculator.compute_line_item(new_line_item)).to eq(2.33)
+        end
+      end
+    end
   end
 
   describe '#compute_shipment' do
